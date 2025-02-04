@@ -661,8 +661,8 @@ void systemBus::setup()
     }
     else
     {
-        _drivewireBaud = 57600; //Default or no switch
-        Debug_printv("A14 and A15 High, defaulting to 57600 baud");
+        _drivewireBaud = 57600; // dragon, invert the serial pins too
+        Debug_printv("A14 and A15 High, (DRAGON) defaulting to 57600 baud");
     }
 
 #endif /* FORCE_UART_BAUD */
@@ -678,6 +678,7 @@ void systemBus::setup()
     fnDwCom.begin(_drivewireBaud);
     fnDwCom.flush_input();
     Debug_printv("DRIVEWIRE MODE");
+
 
 // jeff hack to see if the S3 is getting serial data    
     // Debug_println("now receiving data...");
