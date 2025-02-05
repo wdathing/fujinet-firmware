@@ -107,7 +107,7 @@ void UARTManager::begin(int baud)
     }
 
     uart_set_pin(_uart_num, tx, rx, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-
+Debug_printf("uart %d.\r\n", _uart_num);
 #ifdef BUILD_ADAM
     if (_uart_num == 2)
         uart_set_line_inverse(_uart_num, UART_SIGNAL_TXD_INV | UART_SIGNAL_RXD_INV);
@@ -120,8 +120,9 @@ void UARTManager::begin(int baud)
         uart_set_line_inverse(_uart_num, UART_SIGNAL_TXD_INV | UART_SIGNAL_RXD_INV);
 #endif /* PINMAP_FOENIX_OS9_D32PRO */
 #else
-    if  (fnSystem.digital_read(PIN_EPROM_A14) == DIGI_HIGH && fnSystem.digital_read(PIN_EPROM_A15) == DIGI_HIGH)
+    if  (_uart_num == 2 && fnSystem.digital_read(PIN_EPROM_A14) == DIGI_HIGH && fnSystem.digital_read(PIN_EPROM_A15) == DIGI_HIGH)
     {
+
         uart_set_line_inverse(_uart_num, UART_SIGNAL_TXD_INV | UART_SIGNAL_RXD_INV);
         Debug_printf("Dragon mode, set uart %d to inverse.\r\n", _uart_num);
     }
