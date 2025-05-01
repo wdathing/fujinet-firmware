@@ -1348,9 +1348,13 @@ void drivewireFuji::insert_boot_device(uint8_t d)
     {
     case 0:
         if  (bIsDragon)
+        {
             fBoot = fsFlash.fnfile_open(config_atr_dragon);
+        }
         else
+        {
             fBoot = fsFlash.fnfile_open(config_atr_coco);
+        }
         break;
     case 1:
         fBoot = fsFlash.fnfile_open(mount_and_boot_atr);

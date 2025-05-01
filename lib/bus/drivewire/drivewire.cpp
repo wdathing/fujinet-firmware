@@ -459,8 +459,10 @@ void systemBus::_drivewire_process_cmd()
         // handle FASTWRITE here
         int vchan = c & 0xF;
         int byte = fnDwCom.read();
+//        Debug_printf("fw got %x, %x\n", (int)c, byte);
         incomingChannel[vchan].push(byte);
     } else {
+//        Debug_printf("got %x\n", (int)c);
         switch (c)
         {
         case OP_JEFF:
@@ -484,12 +486,15 @@ void systemBus::_drivewire_process_cmd()
             op_time();
             break;
         case OP_INIT:
+        Debug_println("got OP_INIT\n");
             op_init();
             break;
         case OP_SERINIT:
+        Debug_println("got OP_SERINIT\n");
             op_serinit();
             break;
         case OP_DWINIT:
+        Debug_println("got OP_DWINIT\n");
             op_dwinit();
             break;
         case OP_SERREAD:
@@ -529,15 +534,20 @@ void systemBus::_drivewire_process_cmd()
             op_serterm();
             break;
         case OP_FUJI:
+        Debug_println("got OP_FUJI\n");
+
             op_fuji();
             break;
         case OP_NET:
+        Debug_println("got OP_NET\n");
             op_net();
             break;
         case OP_CPM:
             op_cpm();
             break;
         default:
+Debug_println("got bad opcode\n");
+
             op_unhandled(c);
             break;
         }
@@ -662,7 +672,7 @@ void systemBus::setup()
     else
     {
         _drivewireBaud = 57600; // dragon, invert the serial pins too
-        Debug_printv("A14 and A15 High, (DRAGON) defaulting to 57600 baud");
+        Debug_printv("A14 and A15 High, (DRAGON) setting to %d baud", _drivewireBaud);
     }
 
 #endif /* FORCE_UART_BAUD */
@@ -681,16 +691,22 @@ void systemBus::setup()
 
 
 // jeff hack to see if the S3 is getting serial data    
-    // Debug_println("now receiving data...");
-    // uint8_t b[] = {' '};
-    // while(1)
-    // {
-    //     while (fnDwCom.available())
-    //     {
-    //         fnDwCom.read(b,1);
-    //         Debug_printf("%c\n",b[0]);
-    //     }
-    // }
+#if 0
+     Debug_println("now receiving data...");
+     uint8_t b[] = {' '};
+     uint8_t c[] = {0xa5, 0x00, 0xff};
+     while(1)
+     {
+         if (fnDwCom.available())
+         {
+             fnDwCom.read(b,1);
+             Debug_printf("%c\n",b[0]);
+         }
+        fnDwCom.write(c,3);
+        usleep(40);
+      fnDwCom.poll(1);  
+     }
+#endif     
 // end jeff hack
 
 }
