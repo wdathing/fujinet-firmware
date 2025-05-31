@@ -194,9 +194,9 @@ private:
     drivewireFuji *_fujiDev = nullptr;
     //drivewireNetwork *_netDev[8] = {nullptr};
     drivewireUDPStream *_udpDev = nullptr;
-    drivewireCassette *_cassetteDev = nullptr;
     drivewireCPM *_cpmDev = nullptr;
     drivewirePrinter *_printerdev = nullptr;
+    bool bSDinited = false;
 
     void _drivewire_process_cmd();
     void _drivewire_process_queue();
@@ -309,7 +309,6 @@ public:
     bool getShuttingDown() { return shuttingDown; };
     bool motorActive = false;
 
-    drivewireCassette *getCassette() { return _cassetteDev; }
     drivewirePrinter *getPrinter() { return _printerdev; }
     void setPrinter(drivewirePrinter *_p) { _printerdev = _p; }
     drivewireCPM *getCPM() { return _cpmDev; }
@@ -317,6 +316,8 @@ public:
 
     // I wish this codebase would make up its mind to use camel or snake casing.
     drivewireModem *get_modem() { return _modemDev; }
+
+    void handleDeferredInits();
 
 #ifdef ESP32_PLATFORM
     QueueHandle_t qDrivewireMessages = nullptr;

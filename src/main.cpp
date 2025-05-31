@@ -152,8 +152,10 @@ void main_setup(int argc, char *argv[])
 
 #ifdef DEBUG
     Debug_printf("\r\n\r\n--~--~--~--\nFujiNet %s Started @ %lu\r\n", fnSystem.get_fujinet_version(), startms);
+#ifndef BUILD_COCO    
     Debug_printf("Starting heap: %lu\r\n", fnSystem.get_free_heap_size());
     Debug_printv("Heap: %lu\r\n",esp_get_free_internal_heap_size());
+#endif    
     #ifdef ATARI
     Debug_printf("PsramSize %u\r\n", fnSystem.get_psram_size());
     Debug_printf("himem phys %u\r\n", esp_himem_get_phys_size());
@@ -219,7 +221,9 @@ void main_setup(int argc, char *argv[])
 
     fsFlash.start();
 #ifdef ESP_PLATFORM
+#ifndef BUILD_COCO
     fnSDFAT.start();
+#endif
 #else
     fnSDFAT.start(Config.get_general_SD_path().c_str());
 #endif
@@ -293,7 +297,7 @@ void main_setup(int argc, char *argv[])
     if (ptype == drivewirePrinter::printer_type::PRINTER_INVALID)
         ptype = drivewirePrinter::printer_type::PRINTER_FILE_TRIM;
 
-    Debug_printf("Creating a default printer using %s storage and type %d\r\n", ptrfs->typestring(), ptype);
+    //Debug_printf("Creating a default printer using %s storage and type %d\r\n", ptrfs->typestring(), ptype);
 
     drivewirePrinter *ptr = new drivewirePrinter(ptrfs, ptype);
     fnPrinters.set_entry(0, ptr, ptype, Config.get_printer_port(0));
@@ -466,8 +470,12 @@ void main_setup(int argc, char *argv[])
 #ifdef ESP_PLATFORM
   #ifdef DEBUG
     unsigned long endms = fnSystem.millis();
+        #ifndef BUILD_COCO
     Debug_printf("\r\nAvailable heap: %lu\r\nSetup complete @ %lu (%lums)\r\n", fnSystem.get_free_heap_size(), endms, endms - startms);
     Debug_printv("Low Heap: %lu",esp_get_free_internal_heap_size());
+        #else
+    Debug_printf("\r\nSetup complete @ %lu (%lums)\r\n", endms, endms - startms);
+        #endif
   #endif // DEBUG
 
 #ifdef ENABLE_DISPLAY
@@ -515,7 +523,6 @@ void fn_service_loop(void *param)
       return; // get out, shutdown already requested
     }
 #endif
-
     // Now that our main service is running, try connecting to WiFi or BlueTooth
     if (Config.get_bt_status())
     {
@@ -576,6 +583,9 @@ void fn_service_loop(void *param)
         }
 #endif
     }
+#ifdef BUILD_COCO
+    SYSTEM_BUS.handleDeferredInits();
+#endif
 }
 
 

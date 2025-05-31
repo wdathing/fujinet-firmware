@@ -54,29 +54,39 @@ void KeyManager::setup()
     if (PIN_BUTTON_A == GPIO_NUM_NC)
     {
         _keys[eKey::BUTTON_A].disabled = true;
+#ifndef BUILD_COCO
         Debug_printf("Button A Disabled\r\n");
+#endif        
     }
     else
     {
         fnSystem.set_pin_mode(PIN_BUTTON_A, gpio_mode_t::GPIO_MODE_INPUT, SystemManager::pull_updown_t::PULL_UP);
+#ifndef BUILD_COCO
         Debug_printf("Button A Enabled on IO%d\r\n",mButtonPin[eKey::BUTTON_A]);
+#endif
     }
 
     if (PIN_BUTTON_B == GPIO_NUM_NC)
     {
         _keys[eKey::BUTTON_B].disabled = true;
+#ifndef BUILD_COCO
         Debug_printf("Button B Disabled\r\n");
+#endif
     }
     else
     {
         fnSystem.set_pin_mode(PIN_BUTTON_B, gpio_mode_t::GPIO_MODE_INPUT, SystemManager::pull_updown_t::PULL_UP);
+#ifndef BUILD_COCO
         Debug_printf("Button B Enabled on IO%d\r\n", mButtonPin[eKey::BUTTON_B]);
+#endif
     }
 
     if (fnSystem.get_safe_reset_gpio() == GPIO_NUM_NC)
     {
         _keys[eKey::BUTTON_C].disabled = true;
+#ifndef BUILD_COCO
         Debug_printf("Button C (Safe Reset) Disabled\r\n");
+#endif
     }
     else
     {
@@ -88,8 +98,10 @@ void KeyManager::setup()
             fnSystem.set_pin_mode(PIN_BUTTON_C, gpio_mode_t::GPIO_MODE_INPUT, SystemManager::pull_updown_t::PULL_NONE);
 #   else
         fnSystem.set_pin_mode(PIN_BUTTON_C, gpio_mode_t::GPIO_MODE_INPUT, SystemManager::pull_updown_t::PULL_NONE);
-#   endif        
+#   endif
+#ifndef BUILD_COCO
         Debug_printf("Button C (Safe Reset) Enabled on IO%d\r\n", mButtonPin[eKey::BUTTON_C]);
+#endif
     }
 
 #   endif /* NO_BUTTONS */

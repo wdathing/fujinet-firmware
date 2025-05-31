@@ -100,10 +100,6 @@ private:
 
     Hash::Algorithm algorithm = Hash::Algorithm::UNKNOWN;
 
-#ifdef ESP_PLATFORM
-    drivewireCassette _cassetteDev;
-#endif
-
     int _current_open_directory_slot = -1;
 
     drivewireDisk _bootDisk; // special disk drive just for configuration
@@ -181,9 +177,6 @@ public:
 
     drivewireNetwork *network();
 
-#ifdef ESP_PLATFORM
-    drivewireCassette *cassette() { return &_cassetteDev; };
-#endif
     void debug_tape();
 
     void insert_boot_device(uint8_t d);

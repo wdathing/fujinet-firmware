@@ -130,6 +130,18 @@ void systemBus::op_readex()
 
     Debug_printf("OP_READ: DRIVE %3u - SECTOR %8lu\n", drive_num, lsn);
 
+    // this is a hack to get fujinet to boot faster than the coco1
+    // it turns out that HDBdos will wait a very long time for the read command,
+    // so we can safely defer mounting SD card until here.
+    // potentially we would do this even later, i.e. kick off a thread here to 
+    // mount it, waiting only if there's a boot image override that needs the SD
+    // card
+    if (!bSDinited) 
+    {
+        fnSDFAT.start();
+        bSDinited = true;
+    }
+
     if (theFuji.boot_config && drive_num == 0)
         d = theFuji.bootdisk();
     else
@@ -561,18 +573,6 @@ void systemBus::_drivewire_process_queue()
  */
 void systemBus::service()
 {
-#ifdef ESP_PLATFORM
-    // Handle cassette play if MOTOR pin active.
-    if (_cassetteDev)
-    {
-        if (motorActive)
-        {
-            _cassetteDev->play();
-            return;
-        }
-    }
-#endif
-
     // check and assert interrupts if needed for any open
     // network device.
     if (!_netDev.empty())
@@ -612,21 +612,6 @@ void systemBus::setup()
 #endif
 
 #else
-	// Setup interrupt for cassette motor pin
-	gpio_config_t io_conf = {
-		.pin_bit_mask = (1ULL << PIN_CASS_MOTOR), // bit mask of the pins that you want to set
-        .mode = GPIO_MODE_INPUT,                  // set as input mode
-        .pull_up_en = GPIO_PULLUP_DISABLE,        // disable pull-up mode
-        .pull_down_en = GPIO_PULLDOWN_ENABLE,     // enable pull-down mode
-        .intr_type = GPIO_INTR_POSEDGE            // interrupt on positive edge
-	};
-
-	_cassetteDev = new drivewireCassette();
-
-    // configure GPIO with the given settings
-    gpio_config(&io_conf);
-    gpio_isr_handler_add((gpio_num_t)PIN_CASS_MOTOR, drivewire_isr_handler, (void *)PIN_CASS_MOTOR);
-
     // Configure CD pin.
     fnSystem.set_pin_mode(PIN_CD, gpio_mode_t::GPIO_MODE_OUTPUT_OD, SystemManager::pull_updown_t::PULL_UP);
     fnSystem.digital_write(PIN_CD, DIGI_HIGH);
@@ -647,22 +632,18 @@ void systemBus::setup()
     if (fnSystem.digital_read(PIN_EPROM_A14) == DIGI_LOW && fnSystem.digital_read(PIN_EPROM_A15) == DIGI_LOW)
     {
         _drivewireBaud = 38400; //Coco1 ROM Image
-        Debug_printv("A14 Low, A15 Low, 38400 baud");
     }
     else if (fnSystem.digital_read(PIN_EPROM_A14) == DIGI_HIGH && fnSystem.digital_read(PIN_EPROM_A15) == DIGI_LOW)
     {
         _drivewireBaud = 57600; //Coco2 ROM Image
-        Debug_printv("A14 High, A15 Low, 57600 baud");
     }
     else if  (fnSystem.digital_read(PIN_EPROM_A14) == DIGI_LOW && fnSystem.digital_read(PIN_EPROM_A15) == DIGI_HIGH)
     {
         _drivewireBaud = 115200; //Coco3 ROM Image
-        Debug_printv("A14 Low, A15 High, 115200 baud");
     }
     else
     {
         _drivewireBaud = 57600; //Default or no switch
-        Debug_printv("A14 and A15 High, defaulting to 57600 baud");
     }
 
 #endif /* FORCE_UART_BAUD */
@@ -672,24 +653,27 @@ void systemBus::setup()
     fnDwCom.set_serial_port(Config.get_serial_port().c_str()); // UART
     _drivewireBaud = Config.get_serial_baud();
 #endif
-    fnDwCom.set_becker_host(Config.get_boip_host().c_str(), Config.get_boip_port()); // Becker
-    fnDwCom.set_drivewire_mode(Config.get_boip_enabled() ? DwCom::dw_mode::BECKER : DwCom::dw_mode::SERIAL);
+    if (Config.get_boip_enabled() == true)
+    {
+        fnDwCom.set_becker_host(Config.get_boip_host().c_str(), Config.get_boip_port()); // Becker
+        fnDwCom.set_drivewire_mode(Config.get_boip_enabled() ? DwCom::dw_mode::BECKER : DwCom::dw_mode::SERIAL);
+    }
 
     fnDwCom.begin(_drivewireBaud);
     fnDwCom.flush_input();
-    Debug_printv("DRIVEWIRE MODE");
+//    Debug_printv("DRIVEWIRE MODE");
 
 // jeff hack to see if the S3 is getting serial data    
-    // Debug_println("now receiving data...");
-    // uint8_t b[] = {' '};
-    // while(1)
-    // {
-    //     while (fnDwCom.available())
-    //     {
-    //         fnDwCom.read(b,1);
-    //         Debug_printf("%c\n",b[0]);
-    //     }
-    // }
+//     Debug_println("now receiving data...");
+//    uint8_t b[] = {' '};
+//     while(1)
+//    {
+//         while (fnDwCom.available())
+//         {
+//             fnDwCom.read(b,1);
+//             Debug_printf("%c\n",b[0]);
+//         }
+//     }
 // end jeff hack
 
 }
@@ -737,6 +721,15 @@ void systemBus::setBaudrate(int baud)
     Debug_printf("Changing baudrate from %d to %d\n", _drivewireBaud, baud);
     _drivewireBaud = baud;
     //_modemDev->get_uart()->set_baudrate(baud); // TODO COME BACK HERE.
+}
+
+void systemBus::handleDeferredInits()
+{
+    if (!bSDinited) 
+    {
+        fnSDFAT.start();
+        bSDinited = true;
+    }
 }
 
 systemBus DRIVEWIRE; // Global DRIVEWIRE object

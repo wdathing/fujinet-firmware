@@ -113,12 +113,10 @@ void UARTManager::begin(int baud)
 #endif /* BUILD_ADAM */
 
 #ifdef BUILD_COCO                   // do invert for coco builds
-#ifndef PINMAP_COCO_CART           // do not invert for coco carts
-#ifndef PINMAP_FOENIX_OS9_D32PRO  // do not invert for Foenix
+#if !defined(PINMAP_COCO_CART) && !defined(PINMAP_FOENIX_OS9_D32PRO)
     if (_uart_num == 2)
         uart_set_line_inverse(_uart_num, UART_SIGNAL_TXD_INV | UART_SIGNAL_RXD_INV);
-#endif /* PINMAP_FOENIX_OS9_D32PRO */
-#endif /* PINMAP_COCO_CART */
+#endif /* !defined(PINMAP_COCO_CART) && !defined(PINMAP_FOENIX_OS9_D32PRO) */
 #endif /* BUILD_COCO */
 
 
