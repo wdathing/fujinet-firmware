@@ -446,6 +446,23 @@ void systemBus::op_print()
     _printerdev->write(fnDwCom.read());
 }
 
+void systemBus::op_namedobj_mnt()
+{
+    uint8_t namelen;
+    uint16_t i;
+
+    namelen = fnDwCom.read();
+    memset(szNamedMount,0,sizeof(szNamedMount));
+    for (i=0; i<namelen;i++)
+        szNamedMount[i]= fnDwCom.read();
+
+    fnDwCom.write(0x01);
+    Debug_printf("op_namedobj_mnt: %s\r\n", szNamedMount);
+
+    // treat this event as a reset...
+    op_reset();
+}
+
 // Read and process a command frame from DRIVEWIRE
 void systemBus::_drivewire_process_cmd()
 {
@@ -509,6 +526,9 @@ void systemBus::_drivewire_process_cmd()
             break;
         case OP_PRINT:
             op_print();
+            break;
+        case OP_NAMEOBJ_MNT:
+            op_namedobj_mnt();
             break;
         case OP_PRINTFLUSH:
             // Not needed.
