@@ -113,6 +113,7 @@ void systemBus::op_reset()
     theFuji.insert_boot_device(Config.get_general_boot_mode());
 }
 
+#if 0
 void systemBus::op_readex()
 {
     drivewireDisk *d = nullptr;
@@ -201,6 +202,142 @@ void systemBus::op_readex()
     // finally, send the transaction status
     fnDwCom.write(rc);
     fnDwCom.flush();
+}
+#endif
+
+void systemBus::op_readex()
+{
+    drivewireDisk *d = nullptr;
+    uint16_t c1 = 0, c2 = 0;
+    static FILE *fp = NULL;
+
+    drive_num = fnDwCom.read();
+
+    lsn = fnDwCom.read() << 16;
+    lsn |= fnDwCom.read() << 8;
+    lsn |= fnDwCom.read();
+
+    // named object support for dragon
+    if (strlen((const char*)szNamedMount))
+    {
+        Debug_printf("op_readex: boot from named object %s\r\n", szNamedMount);
+        Debug_printf("OP_READEX: DRIVE %3u - SECTOR %8lu\n", drive_num, lsn);
+
+#if 1
+        if (NULL==fp)
+            fp = fopen((const char*)szNamedMount, "r");
+        if (NULL==fp)
+        {
+            Debug_printf("op_readex: boot from named object %s\r\n", "/AUTOLOAD.DWL");
+            fp = fopen((const char*)"/AUTOLOAD.DWL", "r");
+        }
+#endif        
+#if 0
+        if (NULL==fp)
+        {
+            Debug_printf("op_readex: boot from named object %s\r\n", "/autoload.dwl");
+            fp = fopen((const char*)"/autoload.dwl", "r");
+        }
+        if (NULL==fp)
+        {
+            Debug_printf("op_readex: boot from named object %s\r\n", "autoload.dwl");
+            fp = fopen((const char*)"autoload.dwl", "r");
+        }
+#endif
+        if (fp)
+        {
+            size_t bytesrd;
+            Debug_printf("op_readex: open successful %s\r\n", szNamedMount);
+            
+            memset(sector_data,0,MEDIA_BLOCK_SIZE);
+            bytesrd = fread(sector_data,1,MEDIA_BLOCK_SIZE,fp);
+            if (bytesrd!=MEDIA_BLOCK_SIZE || feof(fp))
+            {   
+                Debug_printf("op_readex: closed named object %s\r\n",szNamedMount);
+                fclose(fp);
+                fp = NULL;
+                // do this only one time
+                szNamedMount[0]=(uint8_t)0;
+            }
+            //fclose(fp);
+            //return;
+        }
+        else
+        {
+            Debug_printf("op_readex: open failed %s\r\n", szNamedMount);
+            fnDwCom.write(0xF4);
+            return;
+        }
+    }
+    else
+    {
+        Debug_printf("OP_READEX: DRIVE %3u - SECTOR %8lu\n", drive_num, lsn);
+        // TEMP FIX FOR 
+        
+        if (true==bDragon && drive_num>=5) drive_num = drive_num-5;
+
+        if (theFuji.boot_config)
+            d = theFuji.bootdisk();
+        else
+            d = &theFuji.get_disks(drive_num)->disk_dev;
+
+        if (!d)
+        {
+            Debug_printv("Invalid drive #%3u", drive_num);
+            fnDwCom.write(0xF6);
+            fnDwCom.flush();
+            fnDwCom.flush_input();
+            
+            return;
+        }
+
+        if (!d->device_active)
+        {
+            Debug_printv("Device not active.");
+            fnDwCom.write(0xF6);
+            fnDwCom.flush();
+            fnDwCom.flush_input();
+            return;
+        }
+
+        if (d->read(lsn, sector_data))
+        {
+            Debug_printf("Read error\n");
+            fnDwCom.write(0xF4);
+            fnDwCom.flush();
+            fnDwCom.flush_input();
+            return;
+        }
+        Debug_printf("read successful, writing to DW\n");
+    }
+    fnDwCom.write(sector_data, MEDIA_BLOCK_SIZE);
+
+    c1 = (fnDwCom.read()) << 8;
+    c1 |= fnDwCom.read();
+
+    c2 = drivewire_checksum(sector_data, MEDIA_BLOCK_SIZE);
+
+    #if 1
+    if (c1 != c2)
+    {
+        fnDwCom.write(243);
+        Debug_printf("OP_READEX checksum mismatch recv %04x, calc %04x\n", c1, c2);
+    }
+    else
+    #endif
+    {
+        fnDwCom.write(0x00);
+        Debug_printf("OP_READEX checksum valid/success\n");        
+    }
+#if 0    
+    Debug_printf("OP_READEX checksums recv %04x, calc %04x\n", c1, c2);
+    for (c1=0;c1<255;c1++)
+    {
+        Debug_printf("%02x:", sector_data[c1]);
+        if (c1 && c1%16==0) Debug_printf("\r\n");
+    }
+    Debug_printf("\r\n");
+#endif
 }
 
 void systemBus::op_write()
@@ -684,8 +821,8 @@ void systemBus::setup()
     }
     else
     {
-        _drivewireBaud = 57600; //Default or no switch
-        Debug_printv("A14 and A15 High, defaulting to 57600 baud");
+        _drivewireBaud = 57600; // Dragon
+        Debug_printv("A14 and A15 High, (DRAGON) defaulting to 57600 baud");
     }
 
 #endif /* FORCE_UART_BAUD */
@@ -701,6 +838,7 @@ void systemBus::setup()
     fnDwCom.begin(_drivewireBaud);
     fnDwCom.flush_input();
     Debug_printv("DRIVEWIRE MODE");
+    szNamedMount[0]=(uint8_t)0;
 
 // jeff hack to see if the S3 is getting serial data
     // Debug_println("now receiving data...");
